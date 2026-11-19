@@ -1,0 +1,42 @@
+# Calendar: open gaps
+
+What the calendar still lacks, checked against the code on 2026-10-16. Create, edit, delete, drag
+and keyboard moves, day/week/month/agenda views, search, RSVP (including propose-a-new-time and
+accepting a counter; see Bugs), and Google, generic CalDAV and Microsoft Graph sync all work.
+Verify an item against the code before planning from it, and delete it here when it lands.
+
+## Bugs
+
+- **Deleting a whole series as a guest tells nobody.** `_deleteEntireEvent` queues a
+  `DestroyEventTask`, and Google drops a guest's deleted copy without telling the organizer. Deleting
+  one occurrence does reach them, because Google turns the EXDATE into a decline. Checked live
+  2026-10-15 with an Outlook.com organizer.
+- **A rejected save stays on screen.** When the server refuses a save without changing its own copy
+  (Google's 409 for a SEQUENCE lower than its own, or a 400 or 403), the local row keeps the rejected
+  change, and a resync doesn't correct it because the row's etag still matches the server's. An etag
+  conflict (412) does correct itself: the server's etag has changed, so the next sync re-reads it.
+
+## Partial
+
+- **Repeat rules.** The event panel's Repeat offers none, daily, weekly, monthly and yearly. There is no
+  interval, weekday choice, count or end date, and no custom rule.
+- **Sending invitations.** Attendees and the organizer are written into the event, but neither the app
+  nor the sync engine sends an iMIP REQUEST or CANCEL; the engine sends only REPLY and COUNTER
+  (`TaskProcessor.cpp`). Guests hear about a meeting only if the CalDAV server does the scheduling.
+  Google does: invitations, updates and cancellations, for a whole series or one occurrence, all
+  reached an Outlook.com guest (checked live 2026-10-05 to 2026-10-15). Other servers are unverified.
+  Whether guests on clients other than Google and Outlook.com apply an update sent at an unchanged
+  SEQUENCE, as undo and redo send, is untested.
+- **Keyboard.** Enter does not open the selected event, and New Event (`core:add-item`) has no default
+  key. On hold until the event card moves into a sidebar.
+- **Notes formatting.** The event panel shows a description as plain text:
+  `extractNotesFromDescription` (`calendar-helpers.tsx`) flattens the HTML Google writes (bold,
+  lists, links) into lines, and only bare URLs come back as links. Showing the formatting, from
+  sanitized HTML or from Markdown in a plain-text description, is open.
+- **CalDAV server address.** Hosts are discovered through the identity server
+  (`DAVWorker.cpp`, `resolve-dav-hosts`); there is no setting to enter one by hand.
+
+## Not built
+
+Year view, creating calendars, sharing, ICS import/export, tasks (see `caldav-10-vtodo-support.md`),
+free/busy lookup, working hours, a second timezone column, printing.
